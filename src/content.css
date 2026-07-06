@@ -1,4 +1,10 @@
-.html5-video-player.dcb-cat-enhanced .ytp-progress-bar-container.dcb-progress-host {
+.dcb-progress-host {
+  overflow: visible !important;
+}
+
+.html5-video-player.dcb-cat-enhanced .ytp-progress-bar-container.dcb-progress-host,
+.bpx-player-container.dcb-cat-enhanced .dcb-progress-host,
+.bilibili-player.dcb-cat-enhanced .dcb-progress-host {
   overflow: visible !important;
 }
 
@@ -14,6 +20,11 @@
   z-index: 82;
   opacity: 0.98;
   filter: drop-shadow(0 2px 2px rgba(16, 23, 42, 0.28));
+}
+
+.dcb-cat-progress[data-site="bilibili"] {
+  inset: -44px 0 auto 0;
+  z-index: 76;
 }
 
 .dcb-runner {

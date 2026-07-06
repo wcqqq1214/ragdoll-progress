@@ -16,3 +16,7 @@ cd ragdoll-progress
 3. Click **Load unpacked**.
 4. Select the cloned `ragdoll-progress` folder, which contains `manifest.json`.
 5. Open or refresh a YouTube or Bilibili video page.
+
+## License
+
+MIT

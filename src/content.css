@@ -32,7 +32,7 @@
 }
 
 .dcb-cat-progress[data-site="douyin"] {
-  inset: -41px 0 auto 0;
+  inset: -34px 0 auto 0;
   z-index: 120;
 }
 
@@ -72,14 +72,5 @@
 
   50% {
     transform: translateX(-50%) translateY(-2px) rotate(1deg);
-  }
-}
-
-@media (max-width: 720px) {
-  .dcb-cat-progress {
-    --dcb-runner-width: 66px;
-    --dcb-runner-height: 37px;
-    inset: -30px 0 auto 0;
-    height: 34px;
   }
 }

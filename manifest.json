@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Ragdoll Progress",
-  "description": "Decorates YouTube and Bilibili video progress bars with a cute running ragdoll cat.",
-  "version": "0.2.0",
+  "description": "Decorates video progress bars on YouTube, Bilibili, and Douyin with a cute running ragdoll cat.",
+  "version": "0.3.0",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",
@@ -24,7 +24,8 @@
         "*://www.youtube.com/*",
         "*://m.youtube.com/*",
         "*://www.bilibili.com/*",
-        "*://m.bilibili.com/*"
+        "*://m.bilibili.com/*",
+        "*://*.douyin.com/*"
       ],
       "css": [
         "src/content.css"
@@ -44,7 +45,8 @@
         "*://www.youtube.com/*",
         "*://m.youtube.com/*",
         "*://www.bilibili.com/*",
-        "*://m.bilibili.com/*"
+        "*://m.bilibili.com/*",
+        "*://*.douyin.com/*"
       ]
     }
   ]

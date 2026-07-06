@@ -39,6 +39,30 @@
       videoSelectors: [
         "video"
       ]
+    },
+    {
+      id: "douyin",
+      hostnames: ["douyin.com"],
+      playerSelectors: [
+        ".xgplayer",
+        ".xgplayer-pc",
+        ".douyin-player",
+        "[data-e2e='feed-active-video']",
+        "[data-e2e='video-player']"
+      ],
+      progressSelectors: [
+        ".xgplayer-progress",
+        ".xgplayer-progress-outer",
+        ".xgplayer-progress-inner",
+        ".xg-progress",
+        ".xg-progress-outer",
+        ".xg-progress-inner",
+        ".xg-mini-progress",
+        "[data-e2e='video-progress']"
+      ],
+      videoSelectors: [
+        "video"
+      ]
     }
   ];
 
@@ -67,6 +91,45 @@
     }
 
     return null;
+  }
+
+  function isVisible(element) {
+    const rect = element.getBoundingClientRect();
+
+    return rect.width > 0
+      && rect.height > 0
+      && rect.bottom > 0
+      && rect.right > 0
+      && rect.top < window.innerHeight
+      && rect.left < window.innerWidth;
+  }
+
+  function scoreTarget(target) {
+    let score = 0;
+
+    if (!target.video.paused && !target.video.ended) {
+      score += 100;
+    }
+
+    if (isVisible(target.player)) {
+      score += 50;
+    }
+
+    if (target.video.duration && Number.isFinite(target.video.duration)) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  function pickBestTarget(targets) {
+    if (!targets.length) {
+      return null;
+    }
+
+    return targets.reduce((best, target) => (
+      scoreTarget(target) > scoreTarget(best) ? target : best
+    ));
   }
 
   function createLayer() {
@@ -183,16 +246,23 @@
       return null;
     }
 
+    const targets = [];
+
     for (const selector of site.playerSelectors) {
       for (const player of document.querySelectorAll(selector)) {
         const target = findTargetInPlayer(site, player);
         if (target) {
-          return target;
+          targets.push(target);
         }
       }
     }
 
-    return findFallbackTarget(site);
+    const fallbackTarget = findFallbackTarget(site);
+    if (fallbackTarget) {
+      targets.push(fallbackTarget);
+    }
+
+    return pickBestTarget(targets);
   }
 
   function queueInstall() {

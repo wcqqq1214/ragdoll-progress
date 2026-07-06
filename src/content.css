@@ -4,7 +4,11 @@
 
 .html5-video-player.dcb-cat-enhanced .ytp-progress-bar-container.dcb-progress-host,
 .bpx-player-container.dcb-cat-enhanced .dcb-progress-host,
-.bilibili-player.dcb-cat-enhanced .dcb-progress-host {
+.bilibili-player.dcb-cat-enhanced .dcb-progress-host,
+.xgplayer.dcb-cat-enhanced .dcb-progress-host,
+.xgplayer.dcb-cat-enhanced .xgplayer-controls,
+.douyin-player.dcb-cat-enhanced .dcb-progress-host,
+.douyin-player.dcb-cat-enhanced .douyin-player-controls {
   overflow: visible !important;
 }
 
@@ -14,7 +18,7 @@
   --dcb-runner-height: 47px;
   --dcb-sprite-shift: calc(var(--dcb-runner-width) * -6);
   position: absolute;
-  inset: -42px 0 auto 0;
+  inset: -38px 0 auto 0;
   height: 42px;
   pointer-events: none;
   z-index: 82;
@@ -23,8 +27,13 @@
 }
 
 .dcb-cat-progress[data-site="bilibili"] {
-  inset: -44px 0 auto 0;
+  inset: -40px 0 auto 0;
   z-index: 76;
+}
+
+.dcb-cat-progress[data-site="douyin"] {
+  inset: -41px 0 auto 0;
+  z-index: 120;
 }
 
 .dcb-runner {
@@ -70,7 +79,7 @@
   .dcb-cat-progress {
     --dcb-runner-width: 66px;
     --dcb-runner-height: 37px;
-    inset: -33px 0 auto 0;
+    inset: -30px 0 auto 0;
     height: 34px;
   }
 }

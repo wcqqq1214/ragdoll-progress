@@ -1,6 +1,6 @@
 # Ragdoll Progress
 
-A small Chrome extension that keeps YouTube and Bilibili's native progress bars intact and adds a cute running ragdoll cat above the scrubber.
+A small Chrome extension that keeps the native progress bars on YouTube, Bilibili, and Douyin intact and adds a cute running ragdoll cat above the scrubber.
 
 ![Running ragdoll cat progress bar preview](assets/preview.png)
 
@@ -15,7 +15,7 @@ cd ragdoll-progress
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.
 4. Select the cloned `ragdoll-progress` folder, which contains `manifest.json`.
-5. Open or refresh a YouTube or Bilibili video page.
+5. Open or refresh a YouTube, Bilibili, or Douyin video page.
 
 ## License
 

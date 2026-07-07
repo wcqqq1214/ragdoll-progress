@@ -8,7 +8,9 @@
 .xgplayer.dcb-cat-enhanced .dcb-progress-host,
 .xgplayer.dcb-cat-enhanced .xgplayer-controls,
 .douyin-player.dcb-cat-enhanced .dcb-progress-host,
-.douyin-player.dcb-cat-enhanced .douyin-player-controls {
+.douyin-player.dcb-cat-enhanced .douyin-player-controls,
+[data-e2e="feed-video"].dcb-cat-enhanced .dcb-progress-host,
+.tiktok-web-player.dcb-cat-enhanced .dcb-progress-host {
   overflow: visible !important;
 }
 
@@ -32,6 +34,11 @@
 }
 
 .dcb-cat-progress[data-site="douyin"] {
+  inset: -34px 0 auto 0;
+  z-index: 120;
+}
+
+.dcb-cat-progress[data-site="tiktok"] {
   inset: -34px 0 auto 0;
   z-index: 120;
 }

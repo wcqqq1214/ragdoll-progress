@@ -63,10 +63,31 @@
       videoSelectors: [
         "video"
       ]
+    },
+    {
+      id: "tiktok",
+      hostnames: ["tiktok.com"],
+      pathPattern: /^\/@[^/]+\/video\/\d+/,
+      playerSelectors: [
+        "[data-e2e='feed-video']",
+        "[class*='DivVideoPlayerContainer']",
+        ".xgplayer-container.tiktok-web-player",
+        ".tiktok-web-player"
+      ],
+      progressSelectors: [
+        "[class*='DivVideoProgressContainer']",
+        "[class*='DivProgressBarContainer']",
+        "[class*='DivProgressBar'][class*='eer']",
+        "[aria-label='Video progress']"
+      ],
+      videoSelectors: [
+        "video"
+      ]
     }
   ];
 
   let activeVideo = null;
+  let activeProgressContainer = null;
   let activeLayer = null;
   let rafId = 0;
   let observer = null;
@@ -79,6 +100,7 @@
 
     return SITE_CONFIGS.find((site) => (
       site.hostnames.some((host) => hostname === host || hostname.endsWith(`.${host}`))
+        && (!site.pathPattern || site.pathPattern.test(window.location.pathname))
     ));
   }
 
@@ -91,6 +113,116 @@
     }
 
     return null;
+  }
+
+  function findAll(root, selectors) {
+    const matches = [];
+
+    for (const selector of selectors) {
+      if (root.matches && root.matches(selector)) {
+        matches.push(root);
+      }
+
+      matches.push(...root.querySelectorAll(selector));
+    }
+
+    return matches;
+  }
+
+  function getAttributeNumber(element, name) {
+    const value = Number.parseFloat(element.getAttribute(name));
+
+    return Number.isFinite(value) ? value : null;
+  }
+
+  function normalizeProgressValue(value, min = null, max = null) {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+
+    if (Number.isFinite(min) && Number.isFinite(max) && max > min) {
+      return clamp((value - min) / (max - min), 0, 1);
+    }
+
+    if (value >= 0 && value <= 1) {
+      return value;
+    }
+
+    if (value >= 0 && value <= 100) {
+      return value / 100;
+    }
+
+    return null;
+  }
+
+  function readAriaProgressRatio(progressContainer) {
+    const candidates = findAll(progressContainer, [
+      "[aria-label='Video progress'][aria-valuenow]",
+      "[role='slider'][aria-valuenow]",
+      "[aria-valuenow]"
+    ]);
+
+    for (const candidate of candidates) {
+      const ratio = normalizeProgressValue(
+        getAttributeNumber(candidate, "aria-valuenow"),
+        getAttributeNumber(candidate, "aria-valuemin"),
+        getAttributeNumber(candidate, "aria-valuemax")
+      );
+
+      if (ratio !== null) {
+        return ratio;
+      }
+    }
+
+    return null;
+  }
+
+  function readWidthProgressRatio(progressContainer) {
+    const candidates = findAll(progressContainer, [
+      ".ytp-play-progress",
+      "[class*='ProgressBarElapsed']",
+      "[class*='progress-played']",
+      "[class*='progressPlayed']",
+      "[class*='ProgressPlayed']",
+      "[class*='played']",
+      "[class*='elapsed']",
+      "[class*='Elapsed']"
+    ]);
+
+    for (const candidate of candidates) {
+      const width = window.getComputedStyle(candidate).width;
+      if (width.endsWith("%")) {
+        const ratio = normalizeProgressValue(Number.parseFloat(width));
+        if (ratio !== null) {
+          return ratio;
+        }
+      }
+
+      const parentRect = candidate.parentElement && candidate.parentElement.getBoundingClientRect();
+      const rect = candidate.getBoundingClientRect();
+      if (parentRect && parentRect.width > 0 && rect.width >= 0) {
+        return clamp(rect.width / parentRect.width, 0, 1);
+      }
+    }
+
+    return null;
+  }
+
+  function getNativeProgressRatio(progressContainer) {
+    if (!progressContainer || !progressContainer.isConnected) {
+      return null;
+    }
+
+    return readAriaProgressRatio(progressContainer)
+      ?? readWidthProgressRatio(progressContainer);
+  }
+
+  function getVideoProgressRatio(video) {
+    const duration = video.duration;
+
+    return duration && Number.isFinite(duration)
+      ? clamp(video.currentTime / duration, 0, 1)
+      : 0;
   }
 
   function isVisible(element) {
@@ -160,10 +292,8 @@
       return;
     }
 
-    const duration = activeVideo.duration;
-    const ratio = duration && Number.isFinite(duration)
-      ? clamp(activeVideo.currentTime / duration, 0, 1)
-      : 0;
+    const ratio = getNativeProgressRatio(activeProgressContainer)
+      ?? getVideoProgressRatio(activeVideo);
 
     activeLayer.style.setProperty("--dcb-progress", ratio.toFixed(5));
     activeLayer.classList.toggle("dcb-paused", activeVideo.paused);
@@ -178,8 +308,22 @@
     }
   }
 
+  function clearActiveLayer() {
+    document.querySelectorAll(`.${LAYER_CLASS}`).forEach((layer) => layer.remove());
+
+    activeVideo = null;
+    activeProgressContainer = null;
+    activeLayer = null;
+
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+  }
+
   function installForTarget(target) {
     if (!target) {
+      clearActiveLayer();
       return false;
     }
 
@@ -190,11 +334,18 @@
       progressContainer.appendChild(layer);
     }
 
+    document.querySelectorAll(`.${LAYER_CLASS}`).forEach((existingLayer) => {
+      if (existingLayer !== layer) {
+        existingLayer.remove();
+      }
+    });
+
     layer.dataset.site = site.id;
     player.classList.add(EXTENSION_CLASS, `${SITE_CLASS_PREFIX}${site.id}`);
     prepareProgressHost(progressContainer);
 
     activeVideo = video;
+    activeProgressContainer = progressContainer;
     activeLayer = layer;
     startLoop();
     return true;

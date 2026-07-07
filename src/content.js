@@ -70,15 +70,21 @@
       pathPattern: /^\/@[^/]+\/video\/\d+/,
       playerSelectors: [
         "[data-e2e='feed-video']",
+        "[class*='DivVideoDetailContainer']",
+        "[role='dialog']",
         "[class*='DivVideoPlayerContainer']",
         ".xgplayer-container.tiktok-web-player",
         ".tiktok-web-player"
       ],
       progressSelectors: [
         "[class*='DivVideoProgressContainer']",
+        "[class*='DivSeekBarContainer']",
         "[class*='DivProgressBarContainer']",
         "[class*='DivProgressBar'][class*='eer']",
-        "[aria-label='Video progress']"
+        "[class*='DivSeekBarProgress']",
+        "[aria-label='Video progress']",
+        "[aria-label='Playback progress']",
+        "[aria-label='progress bar']"
       ],
       videoSelectors: [
         "video"
@@ -437,11 +443,32 @@
 
     window.addEventListener("yt-navigate-finish", queueInstall, true);
     window.addEventListener("popstate", queueInstall, true);
+    window.addEventListener("dcb-location-change", queueInstall, true);
     window.addEventListener("pageshow", queueInstall, true);
     window.addEventListener("fullscreenchange", queueInstall, true);
     window.addEventListener("resize", queueInstall, { passive: true });
   }
 
+  function observeHistoryChanges() {
+    if (window.__dcbHistoryObserved) {
+      return;
+    }
+
+    window.__dcbHistoryObserved = true;
+
+    for (const method of ["pushState", "replaceState"]) {
+      const original = history[method];
+      history[method] = function patchedHistoryMethod(...args) {
+        const result = original.apply(this, args);
+        window.dispatchEvent(new Event("dcb-location-change"));
+        window.setTimeout(queueInstall, 600);
+        window.setTimeout(queueInstall, 1400);
+        return result;
+      };
+    }
+  }
+
   queueInstall();
+  observeHistoryChanges();
   observePage();
 })();

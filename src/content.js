@@ -69,21 +69,14 @@
       hostnames: ["tiktok.com"],
       pathPattern: /^\/@[^/]+\/video\/\d+/,
       playerSelectors: [
-        "[data-e2e='feed-video']",
         "[class*='DivVideoDetailContainer']",
         "[role='dialog']",
-        "[class*='DivVideoPlayerContainer']",
-        ".xgplayer-container.tiktok-web-player",
         ".tiktok-web-player"
       ],
       progressSelectors: [
-        "[class*='DivVideoProgressContainer']",
-        "[class*='DivSeekBarContainer']",
-        "[class*='DivProgressBarContainer']",
-        "[class*='DivProgressBar'][class*='eer']",
-        "[class*='DivSeekBarProgress']",
-        "[aria-label='Video progress']",
         "[aria-label='Playback progress']",
+        "[class*='DivVideoProgressContainer']",
+        "[aria-label='Video progress']",
         "[aria-label='progress bar']"
       ],
       videoSelectors: [
@@ -162,11 +155,7 @@
   }
 
   function readAriaProgressRatio(progressContainer) {
-    const candidates = findAll(progressContainer, [
-      "[aria-label='Video progress'][aria-valuenow]",
-      "[role='slider'][aria-valuenow]",
-      "[aria-valuenow]"
-    ]);
+    const candidates = findAll(progressContainer, ["[aria-valuenow]"]);
 
     for (const candidate of candidates) {
       const ratio = normalizeProgressValue(
@@ -186,13 +175,7 @@
   function readWidthProgressRatio(progressContainer) {
     const candidates = findAll(progressContainer, [
       ".ytp-play-progress",
-      "[class*='ProgressBarElapsed']",
-      "[class*='progress-played']",
-      "[class*='progressPlayed']",
-      "[class*='ProgressPlayed']",
-      "[class*='played']",
-      "[class*='elapsed']",
-      "[class*='Elapsed']"
+      "[class*='ProgressBarElapsed']"
     ]);
 
     for (const candidate of candidates) {
@@ -405,31 +388,6 @@
     };
   }
 
-  function findFallbackTarget(site) {
-    const progressContainer = findFirst(document, site.progressSelectors);
-    if (!progressContainer) {
-      return null;
-    }
-
-    const player = progressContainer.closest(site.playerSelectors.join(","));
-    if (!player) {
-      return null;
-    }
-
-    const video = findBestVideo(player, site.videoSelectors)
-      || findBestVideo(document, site.videoSelectors);
-    if (!video) {
-      return null;
-    }
-
-    return {
-      site,
-      player,
-      progressContainer,
-      video
-    };
-  }
-
   function findCurrentTarget() {
     const site = getCurrentSite();
     if (!site) {
@@ -445,11 +403,6 @@
           targets.push(target);
         }
       }
-    }
-
-    const fallbackTarget = findFallbackTarget(site);
-    if (fallbackTarget) {
-      targets.push(fallbackTarget);
     }
 
     return pickBestTarget(targets);
@@ -494,8 +447,7 @@
       history[method] = function patchedHistoryMethod(...args) {
         const result = original.apply(this, args);
         window.dispatchEvent(new Event("dcb-location-change"));
-        window.setTimeout(queueInstall, 600);
-        window.setTimeout(queueInstall, 1400);
+        window.setTimeout(queueInstall, 800);
         return result;
       };
     }

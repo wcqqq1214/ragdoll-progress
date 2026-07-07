@@ -219,8 +219,8 @@
       return null;
     }
 
-    return readAriaProgressRatio(progressContainer)
-      ?? readWidthProgressRatio(progressContainer);
+    return readWidthProgressRatio(progressContainer)
+      ?? readAriaProgressRatio(progressContainer);
   }
 
   function getVideoProgressRatio(video) {

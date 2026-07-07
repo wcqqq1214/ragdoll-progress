@@ -260,6 +260,38 @@
     return score;
   }
 
+  function scoreVideo(video) {
+    let score = 0;
+
+    if (!video.paused && !video.ended) {
+      score += 100;
+    }
+
+    if (isVisible(video)) {
+      score += 50;
+    }
+
+    if (video.duration && Number.isFinite(video.duration)) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  function pickBestVideo(videos) {
+    if (!videos.length) {
+      return null;
+    }
+
+    return videos.reduce((best, video) => (
+      scoreVideo(video) > scoreVideo(best) ? video : best
+    ));
+  }
+
+  function findBestVideo(root, selectors) {
+    return pickBestVideo(findAll(root, selectors));
+  }
+
   function pickBestTarget(targets) {
     if (!targets.length) {
       return null;
@@ -359,7 +391,7 @@
 
   function findTargetInPlayer(site, player) {
     const progressContainer = findFirst(player, site.progressSelectors);
-    const video = findFirst(player, site.videoSelectors);
+    const video = findBestVideo(player, site.videoSelectors);
 
     if (!progressContainer || !video) {
       return null;
@@ -384,7 +416,8 @@
       return null;
     }
 
-    const video = findFirst(player, site.videoSelectors) || findFirst(document, site.videoSelectors);
+    const video = findBestVideo(player, site.videoSelectors)
+      || findBestVideo(document, site.videoSelectors);
     if (!video) {
       return null;
     }

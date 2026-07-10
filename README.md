@@ -15,11 +15,6 @@ A small Chrome extension that keeps native video progress bars intact and adds a
 
 ## Load In Chrome
 
-```bash
-git clone https://github.com/wcqqq1214/ragdoll-progress.git
-cd ragdoll-progress
-```
-
 1. Open `chrome://extensions`.
 2. Enable **Developer mode**.
 3. Click **Load unpacked**.

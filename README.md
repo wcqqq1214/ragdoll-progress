@@ -2,7 +2,7 @@
 
 A small Chrome extension that keeps native video progress bars intact and adds a cute running ragdoll cat above the scrubber.
 
-![Running ragdoll cat progress bar preview](assets/preview.png)
+![Running ragdoll cat animation](assets/ragdoll-progress.gif)
 
 ## Supported Platforms
 

@@ -21,6 +21,16 @@ A small Chrome extension that keeps native video progress bars intact and adds a
 4. Select the cloned `ragdoll-progress` folder, which contains `manifest.json`.
 5. Open or refresh a supported video page.
 
+## Regression Tests
+
+Run `node scripts/test.mjs` with Node.js and Google Chrome installed. On macOS,
+the runner uses Chrome's standard application path; elsewhere, set `CHROME_PATH`
+to the Chrome executable.
+
+The tests use a temporary browser profile and local fixtures to check native
+progress geometry, paused seeking, playback updates, and cleanup. They do not
+access your normal browser profile or replace live platform compatibility checks.
+
 ## License
 
 MIT

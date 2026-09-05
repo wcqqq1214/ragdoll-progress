@@ -88,6 +88,9 @@
   let activeVideo = null;
   let activeProgressContainer = null;
   let activeLayer = null;
+  let activePlayer = null;
+  let cleanupActiveTarget = null;
+  let isScrubbing = false;
   let rafId = 0;
   let observer = null;
   let installQueued = false;
@@ -178,15 +181,27 @@
       "[class*='ProgressBarElapsed']"
     ]);
 
-    for (const candidate of candidates) {
-      const width = window.getComputedStyle(candidate).width;
-      if (width.endsWith("%")) {
-        const ratio = normalizeProgressValue(Number.parseFloat(width));
-        if (ratio !== null) {
-          return ratio;
+    // Chapter bars each have their own parent. Their local width is not the
+    // video's overall progress; use the last painted edge on the whole track.
+    if (candidates.length > 1) {
+      const trackRect = progressContainer.getBoundingClientRect();
+      if (trackRect.width <= 0) {
+        return null;
+      }
+
+      let playedEdge = trackRect.left;
+      for (const candidate of candidates) {
+        const rect = candidate.getBoundingClientRect();
+        // Unplayed chapters have zero width but start farther along the track.
+        if (rect.width > 0) {
+          playedEdge = Math.max(playedEdge, rect.right);
         }
       }
 
+      return clamp((playedEdge - trackRect.left) / trackRect.width, 0, 1);
+    }
+
+    for (const candidate of candidates) {
       const parentRect = candidate.parentElement && candidate.parentElement.getBoundingClientRect();
       const rect = candidate.getBoundingClientRect();
       if (parentRect && parentRect.width > 0 && rect.width >= 0) {
@@ -299,28 +314,99 @@
     return layer;
   }
 
-  function prepareProgressHost(progressContainer) {
-    progressContainer.classList.add("dcb-progress-host");
+  function prepareProgressHost(player, progressContainer, site) {
+    const addedClasses = [
+      [player, EXTENSION_CLASS],
+      [player, `${SITE_CLASS_PREFIX}${site.id}`],
+      [progressContainer, "dcb-progress-host"]
+    ].filter(([element, name]) => !element.classList.contains(name));
+    addedClasses.forEach(([element, name]) => element.classList.add(name));
 
-    if (window.getComputedStyle(progressContainer).position === "static") {
+    const originalPosition = progressContainer.style.getPropertyValue("position");
+    const originalPriority = progressContainer.style.getPropertyPriority("position");
+    const changedPosition = window.getComputedStyle(progressContainer).position === "static";
+    if (changedPosition) {
       progressContainer.style.position = "relative";
     }
+
+    return () => {
+      addedClasses.forEach(([element, name]) => element.classList.remove(name));
+      // Preserve a newer position assigned by the site while we were attached.
+      if (changedPosition && progressContainer.style.position === "relative"
+        && progressContainer.style.getPropertyPriority("position") === "") {
+        if (originalPosition) {
+          progressContainer.style.setProperty("position", originalPosition, originalPriority);
+        } else {
+          progressContainer.style.removeProperty("position");
+        }
+      }
+    };
+  }
+
+  function observeActiveTarget(video, progressContainer, layer) {
+    const removers = [];
+    const listen = (element, name, handler) => {
+      element.addEventListener(name, handler, { capture: true, passive: true });
+      removers.push(() => element.removeEventListener(name, handler, true));
+    };
+    for (const event of ["play", "playing", "pause", "ended", "seeking", "seeked",
+      "timeupdate", "loadedmetadata", "durationchange", "emptied"]) {
+      listen(video, event, startLoop);
+    }
+
+    listen(progressContainer, "pointerdown", () => {
+      isScrubbing = true;
+      startLoop();
+    });
+    const finishScrubbing = () => {
+      if (isScrubbing) {
+        isScrubbing = false;
+        startLoop();
+      }
+    };
+    listen(window, "pointerup", finishScrubbing);
+    listen(window, "pointercancel", finishScrubbing);
+    listen(window, "blur", finishScrubbing);
+    listen(progressContainer, "keydown", startLoop);
+    listen(progressContainer, "keyup", startLoop);
+
+    // Native sliders can move before currentTime changes, including while paused.
+    const progressObserver = new MutationObserver((records) => {
+      if (records.some((record) => !layer.contains(record.target))) {
+        startLoop();
+      }
+    });
+    progressObserver.observe(progressContainer, {
+      attributes: true,
+      childList: true,
+      subtree: true
+    });
+
+    return () => {
+      progressObserver.disconnect();
+      removers.forEach((remove) => remove());
+    };
   }
 
   function updateLayer() {
+    rafId = 0;
     if (!activeVideo || !activeLayer || !activeLayer.isConnected) {
-      rafId = 0;
       return;
     }
 
     const ratio = getNativeProgressRatio(activeProgressContainer)
       ?? getVideoProgressRatio(activeVideo);
 
-    activeLayer.style.setProperty("--dcb-progress", ratio.toFixed(5));
+    const progress = ratio.toFixed(5);
+    if (activeLayer.style.getPropertyValue("--dcb-progress") !== progress) {
+      activeLayer.style.setProperty("--dcb-progress", progress);
+    }
     activeLayer.classList.toggle("dcb-paused", activeVideo.paused);
     activeLayer.classList.toggle("dcb-ended", activeVideo.ended);
 
-    rafId = requestAnimationFrame(updateLayer);
+    if ((!activeVideo.paused && !activeVideo.ended) || isScrubbing) {
+      startLoop();
+    }
   }
 
   function startLoop() {
@@ -330,11 +416,17 @@
   }
 
   function clearActiveLayer() {
+    if (cleanupActiveTarget) {
+      cleanupActiveTarget();
+      cleanupActiveTarget = null;
+    }
     document.querySelectorAll(`.${LAYER_CLASS}`).forEach((layer) => layer.remove());
 
     activeVideo = null;
     activeProgressContainer = null;
     activeLayer = null;
+    activePlayer = null;
+    isScrubbing = false;
 
     if (rafId) {
       cancelAnimationFrame(rafId);
@@ -349,6 +441,13 @@
     }
 
     const { site, player, progressContainer, video } = target;
+    if (activeVideo === video && activeProgressContainer === progressContainer
+      && activePlayer === player && activeLayer && activeLayer.isConnected) {
+      startLoop();
+      return true;
+    }
+
+    clearActiveLayer();
     let layer = progressContainer.querySelector(`.${LAYER_CLASS}`);
     if (!layer) {
       layer = createLayer();
@@ -362,9 +461,14 @@
     });
 
     layer.dataset.site = site.id;
-    player.classList.add(EXTENSION_CLASS, `${SITE_CLASS_PREFIX}${site.id}`);
-    prepareProgressHost(progressContainer);
+    const restoreHost = prepareProgressHost(player, progressContainer, site);
+    const stopObserving = observeActiveTarget(video, progressContainer, layer);
+    cleanupActiveTarget = () => {
+      stopObserving();
+      restoreHost();
+    };
 
+    activePlayer = player;
     activeVideo = video;
     activeProgressContainer = progressContainer;
     activeLayer = layer;

@@ -1,6 +1,10 @@
 # Ragdoll Progress
 
-A small Chrome extension that keeps native video progress bars intact and adds a cute running ragdoll cat above the scrubber.
+**Current version: 0.5.1**
+
+A small Chrome extension that brings Fanqie, a fluffy ragdoll cat, to native video
+progress bars on YouTube, Bilibili, Douyin, and TikTok. The cat follows the scrubber
+while the player's original controls stay intact.
 
 The cat is inspired by Fanqie: a fluffy white ruff, a pointed white nose blaze,
 and a plush brown tail. It runs during playback, rests with tucked paws when
@@ -28,6 +32,9 @@ at their actual display size and try the enlarged preview.
 3. Click **Load unpacked**.
 4. Select the cloned `ragdoll-progress` folder, which contains `manifest.json`.
 5. Open or refresh a supported video page.
+
+After updating the extension files, click **Reload** on its card in
+`chrome://extensions`, then refresh your video tabs to load the new version.
 
 ## Regression Tests
 

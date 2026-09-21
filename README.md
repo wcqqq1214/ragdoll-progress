@@ -10,8 +10,6 @@ Respects reduced-motion preferences.
   <img src="assets/ragdoll-progress.gif" alt="Running ragdoll cat animation" width="420">
 </p>
 
-[Interactive preview](assets/preview.html) — open locally.
-
 ## Supported Platforms
 
 [![YouTube](https://img.shields.io/badge/YouTube-video%20pages-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/)

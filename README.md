@@ -36,18 +36,6 @@ at their actual display size and try the enlarged preview.
 After updating the extension files, click **Reload** on its card in
 `chrome://extensions`, then refresh your video tabs to load the new version.
 
-## Regression Tests
-
-Run `node scripts/test.mjs` with Node.js and Google Chrome installed. On macOS,
-the runner uses Chrome's standard application path; elsewhere, set `CHROME_PATH`
-to the Chrome executable.
-
-The tests use a temporary browser profile and local fixtures to check native
-progress geometry, paused seeking, playback updates, and cleanup. Each run checks
-both normal and reduced-motion modes explicitly, independently of the OS setting,
-including running/resting playback poses and the sleeping end pose. They do not
-access your normal browser profile or replace live platform compatibility checks.
-
 ## License
 
 MIT

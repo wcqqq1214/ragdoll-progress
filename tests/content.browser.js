@@ -76,6 +76,9 @@
     }
   }
 
+  await test('browser uses the requested motion preference', async () => {
+    equal(window.matchMedia('(prefers-reduced-motion: reduce)').matches, expectedReducedMotion);
+  });
   await test('single bar keeps transformed native progress ahead of video time', async () => {
     fixture = makeTarget();
     fillTo(0, 0.625);
@@ -139,7 +142,10 @@
     await tick();
     equal(frames.size, 1);
     assert(!layer().classList.contains('dcb-paused'), 'pause class remained');
-    equal(runnerStyle().animationName, 'dcb-run');
+    equal(runnerStyle().animationName, expectedReducedMotion ? 'none' : 'dcb-run');
+    if (expectedReducedMotion) {
+      equal(runnerStyle().backgroundPositionX, '-504px');
+    }
     equal(runnerStyle().backgroundSize, '800% 100%');
     fixture.state.paused = true;
     fixture.video.dispatchEvent(new Event('pause'));

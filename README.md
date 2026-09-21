@@ -36,7 +36,9 @@ the runner uses Chrome's standard application path; elsewhere, set `CHROME_PATH`
 to the Chrome executable.
 
 The tests use a temporary browser profile and local fixtures to check native
-progress geometry, paused seeking, playback updates, and cleanup. They do not
+progress geometry, paused seeking, playback updates, and cleanup. Each run checks
+both normal and reduced-motion modes explicitly, independently of the OS setting,
+including running/resting playback poses and the sleeping end pose. They do not
 access your normal browser profile or replace live platform compatibility checks.
 
 ## License

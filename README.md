@@ -2,9 +2,17 @@
 
 A small Chrome extension that keeps native video progress bars intact and adds a cute running ragdoll cat above the scrubber.
 
+The cat is inspired by Fanqie: a fluffy white ruff, a pointed white nose blaze,
+and a plush brown tail. It runs during playback, rests with tucked paws when
+paused, and curls up asleep when the video ends. Reduced-motion preferences
+replace running with the resting pose.
+
 <p align="center">
   <img src="assets/ragdoll-progress.gif" alt="Running ragdoll cat animation" width="420">
 </p>
+
+Open [the interactive preview](assets/preview.html) locally to see all three states
+at their actual display size and try the enlarged preview.
 
 ## Supported Platforms
 

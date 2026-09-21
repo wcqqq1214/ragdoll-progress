@@ -56,15 +56,19 @@
   background-image: var(--dcb-cat-sprite);
   background-repeat: no-repeat;
   background-position: 0 50%;
-  background-size: 600% 100%;
+  background-size: 800% 100%;
   animation:
-    dcb-run 720ms steps(6) infinite,
-    dcb-bob 720ms ease-in-out infinite;
+    dcb-run 840ms steps(6) infinite;
 }
 
 .dcb-paused .dcb-runner,
 .dcb-ended .dcb-runner {
-  animation-play-state: paused;
+  animation: none;
+  background-position: calc(var(--dcb-runner-width) * -6) 50%;
+}
+
+.dcb-ended .dcb-runner {
+  background-position: calc(var(--dcb-runner-width) * -7) 50%;
 }
 
 @keyframes dcb-run {
@@ -73,13 +77,9 @@
   }
 }
 
-@keyframes dcb-bob {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0) rotate(-1deg);
-  }
-
-  50% {
-    transform: translateX(-50%) translateY(-2px) rotate(1deg);
+@media (prefers-reduced-motion: reduce) {
+  .dcb-runner {
+    animation: none;
+    background-position: calc(var(--dcb-runner-width) * -6) 50%;
   }
 }

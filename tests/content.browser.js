@@ -58,6 +58,7 @@
   }
   const layer = (target = fixture) => target.progressContainer.querySelector('.dcb-cat-progress');
   const progress = () => Number(layer().style.getPropertyValue('--dcb-progress'));
+  const runnerStyle = () => getComputedStyle(layer().querySelector('.dcb-runner'));
   const fillTo = (index, ratio, target = fixture) => {
     target.fills[index].style.transform = `scaleX(${ratio})`;
   };
@@ -124,6 +125,8 @@
     await tick();
     equal(frames.size, 0);
     assert(layer().classList.contains('dcb-paused'), 'pause class missing');
+    equal(runnerStyle().animationName, 'none');
+    equal(runnerStyle().backgroundPositionX, '-504px');
     await tick();
     equal(frames.size, 0);
   });
@@ -136,10 +139,14 @@
     await tick();
     equal(frames.size, 1);
     assert(!layer().classList.contains('dcb-paused'), 'pause class remained');
+    equal(runnerStyle().animationName, 'dcb-run');
+    equal(runnerStyle().backgroundSize, '800% 100%');
     fixture.state.paused = true;
     fixture.video.dispatchEvent(new Event('pause'));
     await tick();
     equal(frames.size, 0);
+    equal(runnerStyle().animationName, 'none');
+    equal(runnerStyle().backgroundPositionX, '-504px');
   });
   await test('paused native slider mutations update without media events', async () => {
     fixture = makeTarget();
@@ -184,6 +191,13 @@
     equal(progress(), 1);
     equal(frames.size, 0);
     assert(layer().classList.contains('dcb-ended'), 'ended class missing');
+    equal(runnerStyle().animationName, 'none');
+    equal(runnerStyle().backgroundPositionX, '-588px');
+    // Real ended videos can be paused as well; the sleeping pose must win.
+    fixture.state.paused = true;
+    fixture.video.dispatchEvent(new Event('pause'));
+    await tick();
+    equal(runnerStyle().backgroundPositionX, '-588px');
   });
   await test('reinstalling the same target preserves the layer and restoration', async () => {
     fixture = makeTarget();

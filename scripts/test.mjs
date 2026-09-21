@@ -9,11 +9,12 @@ const chromePath = process.env.CHROME_PATH
   || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const root = new URL('../', import.meta.url);
 const source = await readFile(new URL('src/content.js', root), 'utf8');
+const styles = await readFile(new URL('src/content.css', root), 'utf8');
 const tests = await readFile(new URL('tests/content.browser.js', root), 'utf8');
 const temporary = await mkdtemp(join(tmpdir(), 'ragdoll-tests-'));
 try {
   const html = join(temporary, 'tests.html');
-  await writeFile(html, `<!doctype html><meta charset="utf-8"><body>
+  await writeFile(html, `<!doctype html><meta charset="utf-8"><style>${styles}</style><body>
     <pre id="results">RUNNING</pre><script>
     const extensionSource = ${JSON.stringify(source).replaceAll('<', '\\u003c')};
     ${tests}

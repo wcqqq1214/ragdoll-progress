@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>番茄 · Ragdoll Progress</title>
+<link rel="stylesheet" href="../src/content.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 64px 28px; background: #f5f2ec; color: #40372f; font: 16px/1.6 system-ui, sans-serif; }
+  main { max-width: 960px; margin: auto; }
+  h1 { font-size: 32px; margin: 0 0 8px; }
+  p { color: #74685c; margin: 0 0 32px; }
+  .states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card { border: 1px solid #dfd7cc; background: #fffdf9; border-radius: 20px; padding: 24px; }
+  .card.dark { background: #282625; color: #f5eee4; border-color: #282625; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0; }
+  .stage { height: 160px; display: grid; align-items: end; padding-bottom: 24px; }
+  .track { position: relative; height: 4px; background: #d7b8a0; border-radius: 4px; }
+  .dcb-cat-progress { --dcb-cat-sprite: url('../assets/cat-sprite.png'); --dcb-progress: .5; filter: none; }
+  .large { margin-top: 24px; }
+  .large .stage { height: 220px; }
+  .large .dcb-cat-progress { --dcb-runner-width: 252px; --dcb-runner-height: 141px; }
+  .large .track { margin: 0 120px; }
+  .controls { display: flex; align-items: center; gap: 16px; margin-top: 24px; }
+  button { color: inherit; background: #eee2d5; border: 0; border-radius: 30px; padding: 10px 20px; font: inherit; cursor: pointer; }
+  input { flex: 1; accent-color: #9a6e51; min-width: 0; }
+  small { color: #8c7f71; display: block; margin-top: 24px; }
+  @media(max-width: 650px) { .states { grid-template-columns: 1fr; } .large .track { margin: 0 112px; } }
+</style>
+<main>
+  <h1>番茄，陪你看到最后。</h1>
+  <p>播放时小跑，暂停时趴好，结束后安心睡觉。</p>
+  <div class="states">
+    <section class="card"><h2>播放 · 小跑</h2><div class="stage"><div class="track"><div class="dcb-cat-progress"><div class="dcb-runner"></div></div></div></div></section>
+    <section class="card"><h2>暂停 · 趴卧</h2><div class="stage"><div class="track"><div class="dcb-cat-progress dcb-paused"><div class="dcb-runner"></div></div></div></div></section>
+    <section class="card dark"><h2>结束 · 睡觉</h2><div class="stage"><div class="track"><div class="dcb-cat-progress dcb-ended"><div class="dcb-runner"></div></div></div></div></section>
+  </div>
+  <section class="card large">
+    <h2>放大看看</h2>
+    <div class="stage"><div class="track"><div id="interactive" class="dcb-cat-progress"><div class="dcb-runner"></div></div></div></div>
+    <div class="controls"><button id="toggle" type="button" aria-pressed="false">暂停</button><input id="progress" type="range" min="0" max="100" value="50" aria-label="播放进度"><button id="end" type="button">看完啦</button></div>
+  </section>
+  <small>上排为扩展实际尺寸，下方为三倍预览。系统开启“减少动态效果”时，小猫会安静趴着。</small>
+</main>
+<script>
+  const cat = document.querySelector('#interactive');
+  const toggle = document.querySelector('#toggle');
+  const progress = document.querySelector('#progress');
+  toggle.onclick = () => {
+    cat.classList.remove('dcb-ended');
+    const paused = cat.classList.toggle('dcb-paused');
+    toggle.textContent = paused ? '继续播放' : '暂停';
+    toggle.setAttribute('aria-pressed', String(paused));
+  };
+  progress.oninput = () => {
+    cat.style.setProperty('--dcb-progress', progress.value / 100);
+    cat.classList.remove('dcb-ended');
+  };
+  document.querySelector('#end').onclick = () => {
+    cat.classList.add('dcb-ended', 'dcb-paused');
+    cat.style.setProperty('--dcb-progress', 1);
+    progress.value = 100;
+    toggle.textContent = '继续播放';
+    toggle.setAttribute('aria-pressed', 'true');
+  };
+</script>
+</html>

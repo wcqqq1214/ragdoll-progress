@@ -1,6 +1,4 @@
-# Ragdoll Progress
-
-**v0.5.1**
+<h1 align="center">Ragdoll Progress</h1>
 
 A Chrome extension that adds Fanqie the ragdoll to native video progress bars.
 Runs during playback, rests when paused, and sleeps when finished.

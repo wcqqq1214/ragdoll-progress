@@ -50,6 +50,7 @@ async function main() {
   const scale = Math.min(392 / Math.max(...cells.map(c => c.bounds.width)),
     218 / Math.max(...cells.map(c => c.bounds.height)));
   const frames = [];
+  const poses = [];
   for (let i = 0; i < cells.length; i++) {
     const c = cells[i];
     const width = Math.round(c.bounds.width * scale);
@@ -57,6 +58,7 @@ async function main() {
     const resized = await sharp(c.buffer).resize(width, height).png().toBuffer();
     // Anchor the face side and ground contact; a small flight lift is intentional.
     const lift = i === 3 ? 8 : 0;
+    poses.push({ input: resized, width, top: 227 - height - lift });
     frames.push(await sharp({ create: { width: 420, height: 235, channels: 4,
       background: '#00000000' } }).composite([{ input: resized,
       left: 406 - width, top: 227 - height - lift }]).png().toBuffer());
@@ -64,8 +66,16 @@ async function main() {
   await sharp({ create: { width: 420 * 8, height: 235, channels: 4, background: '#00000000' } })
     .composite(frames.map((input, i) => ({ input, left: i * 420, top: 0 })))
     .png().toFile(asset('cat-sprite.png'));
-  await sharp(frames[2]).toFile(asset('preview.png'));
-  const { data, info } = await sharp(Buffer.concat(await Promise.all(frames.slice(0, 6)
+  // Center the complete running cycle for standalone previews. Apply one shared
+  // offset so alignment between frames stays identical to the extension sprite.
+  const running = poses.slice(0, 6);
+  const previewRight = Math.round((420 + Math.max(...running.map(pose => pose.width))) / 2);
+  const previews = await Promise.all(running.map(pose => sharp({ create: {
+    width: 420, height: 235, channels: 4, background: '#00000000'
+  } }).composite([{ input: pose.input, left: previewRight - pose.width, top: pose.top }])
+    .png().toBuffer()));
+  await sharp(previews[2]).toFile(asset('preview.png'));
+  const { data, info } = await sharp(Buffer.concat(await Promise.all(previews
     .map(frame => sharp(frame).raw().toBuffer()))), {
       raw: { width: 420, height: 235 * 6, channels: 4, pageHeight: 235 }
     }).gif({ loop: 0, delay: Array(6).fill(140), effort: 7 }).toBuffer({ resolveWithObject: true });

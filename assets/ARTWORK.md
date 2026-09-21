@@ -11,8 +11,8 @@ six running frames, resting loaf, curled sleeping pose. The extension displays
 each cell at 84 × 47 CSS pixels. Running takes 840 ms per cycle.
 
 `preview.png` and `ragdoll-progress.gif` are derived from the same frames.
-The GIF uses six 140 ms frames. `preview.html` demonstrates the production CSS
-on light and dark backgrounds, at actual size and 3× size.
+The GIF uses six 140 ms frames. Standalone previews use one shared horizontal
+offset to center the running cycle without changing the extension sprite layout.
 
 To rebuild, make the optional `sharp` Node package available and run
 `node scripts/build-sprites.cjs`. The extension itself has no runtime dependencies.

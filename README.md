@@ -1,22 +1,16 @@
 # Ragdoll Progress
 
-**Current version: 0.5.1**
+**v0.5.1**
 
-A small Chrome extension that brings Fanqie, a fluffy ragdoll cat, to native video
-progress bars on YouTube, Bilibili, Douyin, and TikTok. The cat follows the scrubber
-while the player's original controls stay intact.
-
-The cat is inspired by Fanqie: a fluffy white ruff, a pointed white nose blaze,
-and a plush brown tail. It runs during playback, rests with tucked paws when
-paused, and curls up asleep when the video ends. Reduced-motion preferences
-replace running with the resting pose.
+A Chrome extension that adds Fanqie the ragdoll to native video progress bars.
+Runs during playback, rests when paused, and sleeps when finished.
+Respects reduced-motion preferences.
 
 <p align="center">
   <img src="assets/ragdoll-progress.gif" alt="Running ragdoll cat animation" width="420">
 </p>
 
-Open [the interactive preview](assets/preview.html) locally to see all three states
-at their actual display size and try the enlarged preview.
+[Interactive preview](assets/preview.html) — open locally.
 
 ## Supported Platforms
 
@@ -25,16 +19,13 @@ at their actual display size and try the enlarged preview.
 [![Douyin](https://img.shields.io/badge/Douyin-web%20videos-000000?logo=tiktok&logoColor=white)](https://www.douyin.com/)
 [![TikTok](https://img.shields.io/badge/TikTok-web%20videos-000000?logo=tiktok&logoColor=white)](https://www.tiktok.com/)
 
-## Load In Chrome
+## Install
 
-1. Open `chrome://extensions`.
-2. Enable **Developer mode**.
-3. Click **Load unpacked**.
-4. Select the cloned `ragdoll-progress` folder, which contains `manifest.json`.
-5. Open or refresh a supported video page.
+1. Open `chrome://extensions` and enable **Developer mode**.
+2. Click **Load unpacked** and select the folder containing `manifest.json`.
+3. Refresh your video page.
 
-After updating the extension files, click **Reload** on its card in
-`chrome://extensions`, then refresh your video tabs to load the new version.
+After updating, reload the extension and refresh your video tabs.
 
 ## License
 

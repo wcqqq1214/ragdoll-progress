@@ -5,8 +5,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Runs real DOM/layout tests in an isolated Chrome profile; no npm dependencies.
-const chromePath = process.env.CHROME_PATH
-  || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+// Set CHROME_PATH to use another Chrome or Chromium binary.
+const defaultChromePaths = {
+  darwin: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  linux: 'google-chrome',
+  win32: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+};
+const chromePath = process.env.CHROME_PATH || defaultChromePaths[process.platform];
+// Chrome refuses to start as root (common in containers and CI) unless its
+// sandbox is disabled. The tests only load a local file, so that is safe here.
+const sandboxArgs = process.getuid?.() === 0 ? ['--no-sandbox'] : [];
 const root = new URL('../', import.meta.url);
 const source = await readFile(new URL('src/content.js', root), 'utf8');
 const styles = await readFile(new URL('src/content.css', root), 'utf8');
@@ -22,7 +30,7 @@ try {
       ${tests}
       </script></body>`);
     const { stdout } = await promisify(execFile)(chromePath, [
-      '--headless', '--no-first-run', '--no-default-browser-check',
+      '--headless', ...sandboxArgs, '--no-first-run', '--no-default-browser-check',
       '--disable-background-networking', `--user-data-dir=${join(temporary, `profile-${motion}`)}`,
       // Override the host OS preference so both modes run on every machine.
       motion === 'reduce' ? '--force-prefers-reduced-motion' : '--force-prefers-no-reduced-motion',

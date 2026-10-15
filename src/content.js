@@ -2,7 +2,11 @@
   const EXTENSION_CLASS = "dcb-cat-enhanced";
   const LAYER_CLASS = "dcb-cat-progress";
   const SPRITE_URL = chrome.runtime.getURL("assets/cat-sprite.png");
-  const SITE_CLASS_PREFIX = "dcb-site-";
+  // Explicit triggers (navigation, fullscreen, a new video playing) rescan
+  // quickly. Background DOM churn such as danmaku only rechecks occasionally
+  // while the current target is still healthy.
+  const FAST_SCAN_DELAY = 150;
+  const IDLE_SCAN_DELAY = 1000;
 
   const SITE_CONFIGS = [
     {
@@ -93,7 +97,8 @@
   let isScrubbing = false;
   let rafId = 0;
   let observer = null;
-  let installQueued = false;
+  let scanTimer = 0;
+  let scanDueAt = 0;
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -142,19 +147,19 @@
       return null;
     }
 
-    if (Number.isFinite(min) && Number.isFinite(max) && max > min) {
-      return clamp((value - min) / (max - min), 0, 1);
+    if (Number.isFinite(min) && Number.isFinite(max)) {
+      return max > min ? clamp((value - min) / (max - min), 0, 1) : null;
     }
 
-    if (value >= 0 && value <= 1) {
-      return value;
+    // ARIA defaults a missing range to 0..100. A value outside it is most
+    // likely in other units (seconds), so let the next source decide.
+    const low = Number.isFinite(min) ? min : 0;
+    const high = Number.isFinite(max) ? max : 100;
+    if (high <= low || value < low || value > high) {
+      return null;
     }
 
-    if (value >= 0 && value <= 100) {
-      return value / 100;
-    }
-
-    return null;
+    return (value - low) / (high - low);
   }
 
   function readAriaProgressRatio(progressContainer) {
@@ -240,32 +245,15 @@
       && rect.left < window.innerWidth;
   }
 
-  function scoreTarget(target) {
-    let score = 0;
-
-    if (!target.video.paused && !target.video.ended) {
-      score += 100;
-    }
-
-    if (isVisible(target.player)) {
-      score += 50;
-    }
-
-    if (target.video.duration && Number.isFinite(target.video.duration)) {
-      score += 10;
-    }
-
-    return score;
-  }
-
-  function scoreVideo(video) {
+  // Prefer playing, visible media with a known duration.
+  function scoreMedia(video, visibleElement) {
     let score = 0;
 
     if (!video.paused && !video.ended) {
       score += 100;
     }
 
-    if (isVisible(video)) {
+    if (isVisible(visibleElement)) {
       score += 50;
     }
 
@@ -276,28 +264,27 @@
     return score;
   }
 
-  function pickBestVideo(videos) {
-    if (!videos.length) {
-      return null;
+  function pickBest(items, score) {
+    let best = null;
+    let bestScore = -Infinity;
+
+    for (const item of items) {
+      const value = score(item);
+      if (value > bestScore) {
+        best = item;
+        bestScore = value;
+      }
     }
 
-    return videos.reduce((best, video) => (
-      scoreVideo(video) > scoreVideo(best) ? video : best
-    ));
+    return best;
   }
 
   function findBestVideo(root, selectors) {
-    return pickBestVideo(findAll(root, selectors));
+    return pickBest(findAll(root, selectors), (video) => scoreMedia(video, video));
   }
 
   function pickBestTarget(targets) {
-    if (!targets.length) {
-      return null;
-    }
-
-    return targets.reduce((best, target) => (
-      scoreTarget(target) > scoreTarget(best) ? target : best
-    ));
+    return pickBest(targets, (target) => scoreMedia(target.video, target.player));
   }
 
   function createLayer() {
@@ -314,10 +301,9 @@
     return layer;
   }
 
-  function prepareProgressHost(player, progressContainer, site) {
+  function prepareProgressHost(player, progressContainer) {
     const addedClasses = [
       [player, EXTENSION_CLASS],
-      [player, `${SITE_CLASS_PREFIX}${site.id}`],
       [progressContainer, "dcb-progress-host"]
     ].filter(([element, name]) => !element.classList.contains(name));
     addedClasses.forEach(([element, name]) => element.classList.add(name));
@@ -447,21 +433,13 @@
       return true;
     }
 
+    // Removes every existing layer, so the new one is always the only one.
     clearActiveLayer();
-    let layer = progressContainer.querySelector(`.${LAYER_CLASS}`);
-    if (!layer) {
-      layer = createLayer();
-      progressContainer.appendChild(layer);
-    }
-
-    document.querySelectorAll(`.${LAYER_CLASS}`).forEach((existingLayer) => {
-      if (existingLayer !== layer) {
-        existingLayer.remove();
-      }
-    });
-
+    const layer = createLayer();
     layer.dataset.site = site.id;
-    const restoreHost = prepareProgressHost(player, progressContainer, site);
+    progressContainer.appendChild(layer);
+
+    const restoreHost = prepareProgressHost(player, progressContainer);
     const stopObserving = observeActiveTarget(video, progressContainer, layer);
     cleanupActiveTarget = () => {
       stopObserving();
@@ -498,66 +476,78 @@
       return null;
     }
 
-    const targets = [];
-
+    // Several selectors can match the same player element.
+    const players = new Set();
     for (const selector of site.playerSelectors) {
-      for (const player of document.querySelectorAll(selector)) {
-        const target = findTargetInPlayer(site, player);
-        if (target) {
-          targets.push(target);
-        }
+      document.querySelectorAll(selector).forEach((player) => players.add(player));
+    }
+
+    const targets = [];
+    for (const player of players) {
+      const target = findTargetInPlayer(site, player);
+      if (target) {
+        targets.push(target);
       }
     }
 
     return pickBestTarget(targets);
   }
 
-  function queueInstall() {
-    if (installQueued) {
+  function hasHealthyTarget() {
+    return Boolean(activeLayer && activeLayer.isConnected
+      && activeVideo && activeVideo.isConnected
+      && activePlayer && activePlayer.isConnected);
+  }
+
+  // Schedule one rescan; an earlier request always wins over a later one.
+  function scheduleScan(delay) {
+    const dueAt = performance.now() + delay;
+    if (scanTimer && scanDueAt <= dueAt) {
       return;
     }
 
-    installQueued = true;
-    window.setTimeout(() => {
-      installQueued = false;
+    window.clearTimeout(scanTimer);
+    scanDueAt = dueAt;
+    scanTimer = window.setTimeout(() => {
+      scanTimer = 0;
       installForTarget(findCurrentTarget());
-    }, 150);
+    }, delay);
+  }
+
+  function queueInstall() {
+    scheduleScan(FAST_SCAN_DELAY);
+  }
+
+  function handleDomMutations() {
+    scheduleScan(hasHealthyTarget() ? IDLE_SCAN_DELAY : FAST_SCAN_DELAY);
+  }
+
+  // Media events do not bubble, but capture on document still sees them.
+  function handleMediaPlay(event) {
+    if (event.target instanceof HTMLMediaElement && event.target !== activeVideo) {
+      queueInstall();
+    }
   }
 
   function observePage() {
-    observer = new MutationObserver(queueInstall);
+    observer = new MutationObserver(handleDomMutations);
     observer.observe(document.documentElement, {
       childList: true,
       subtree: true
     });
 
+    // Content scripts live in an isolated world, so patching history here would
+    // not see the page's own pushState calls; the observers above cover SPA
+    // navigation instead.
     window.addEventListener("yt-navigate-finish", queueInstall, true);
     window.addEventListener("popstate", queueInstall, true);
-    window.addEventListener("dcb-location-change", queueInstall, true);
     window.addEventListener("pageshow", queueInstall, true);
     window.addEventListener("fullscreenchange", queueInstall, true);
     window.addEventListener("resize", queueInstall, { passive: true });
-  }
-
-  function observeHistoryChanges() {
-    if (window.__dcbHistoryObserved) {
-      return;
-    }
-
-    window.__dcbHistoryObserved = true;
-
-    for (const method of ["pushState", "replaceState"]) {
-      const original = history[method];
-      history[method] = function patchedHistoryMethod(...args) {
-        const result = original.apply(this, args);
-        window.dispatchEvent(new Event("dcb-location-change"));
-        window.setTimeout(queueInstall, 800);
-        return result;
-      };
-    }
+    document.addEventListener("play", handleMediaPlay, true);
+    document.addEventListener("playing", handleMediaPlay, true);
   }
 
   queueInstall();
-  observeHistoryChanges();
   observePage();
 })();

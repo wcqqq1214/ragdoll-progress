@@ -10,10 +10,14 @@
   window.chrome.runtime = { getURL: (path) => path };
   // Expose internal functions only in this in-memory test copy. Production has
   // no test exports and retains its normal installation/navigation observers.
-  const startup = '  queueInstall();\n  observeHistoryChanges();\n  observePage();';
+  const startup = '  queueInstall();\n  observePage();';
   if (!extensionSource.includes(startup)) throw new Error('Test bootstrap is stale');
-  (0, eval)(extensionSource.replace(startup,
-    'window.testApi = { installForTarget, clearActiveLayer, getNativeProgressRatio };'));
+  (0, eval)(extensionSource.replace(startup, `window.testApi = {
+    installForTarget, clearActiveLayer, getNativeProgressRatio, handleDomMutations,
+    handleMediaPlay,
+    pendingScanDelay: () => (scanTimer ? scanDueAt - performance.now() : null),
+    cancelScan: () => { window.clearTimeout(scanTimer); scanTimer = 0; }
+  };`));
   const api = window.testApi;
   const assert = (condition, message) => { if (!condition) throw new Error(message); };
   const equal = (actual, expected) => assert(actual === expected, `${actual} !== ${expected}`);
@@ -69,6 +73,7 @@
     } catch (error) {
       results.push(`FAIL ${name}: ${error.message}`);
     } finally {
+      api.cancelScan();
       api.clearActiveLayer();
       document.querySelectorAll('body > div').forEach((element) => element.remove());
       frames.clear();
@@ -264,6 +269,63 @@
     api.clearActiveLayer();
     equal(frames.size, 0);
     equal(fixture.progressContainer.style.position, '');
+  });
+  await test('ARIA without a range uses 0..100 and skips other units', async () => {
+    fixture = makeTarget({ widthProgress: false });
+    fixture.progressContainer.setAttribute('aria-valuenow', '40');
+    close(api.getNativeProgressRatio(fixture.progressContainer), 0.4);
+    fixture.progressContainer.setAttribute('aria-valuenow', '0.5');
+    close(api.getNativeProgressRatio(fixture.progressContainer), 0.005);
+    // Looks like seconds, not a percentage: fall back to video time.
+    fixture.progressContainer.setAttribute('aria-valuenow', '150');
+    equal(api.getNativeProgressRatio(fixture.progressContainer), null);
+    api.installForTarget(fixture);
+    await tick();
+    equal(progress(), 0.25);
+  });
+  await test('runner centers on the playhead but stays inside the bar', async () => {
+    fixture = makeTarget();
+    api.installForTarget(fixture);
+    const runnerBox = async (ratio) => {
+      fillTo(0, ratio);
+      await tick();
+      const track = fixture.progressContainer.getBoundingClientRect();
+      const box = layer().querySelector('.dcb-runner').getBoundingClientRect();
+      return { left: box.left - track.left, right: box.right - track.left, width: box.width };
+    };
+    let box = await runnerBox(0);
+    close(box.left, 0);
+    equal(box.width, 84);
+    box = await runnerBox(0.5);
+    close((box.left + box.right) / 2, 200);
+    box = await runnerBox(1);
+    close(box.right, 400);
+    assert(runnerStyle().transform.startsWith('matrix'), 'runner should move by transform');
+    equal(runnerStyle().left, '0px');
+  });
+  await test('DOM churn rescans slowly while the current target is healthy', async () => {
+    api.handleDomMutations();
+    assert(api.pendingScanDelay() <= 150, 'no target should rescan quickly');
+    api.cancelScan();
+    fixture = makeTarget();
+    api.installForTarget(fixture);
+    api.handleDomMutations();
+    assert(api.pendingScanDelay() > 900, 'healthy target should rescan slowly');
+    // A later, slower request never postpones an earlier pending scan.
+    fixture.player.remove();
+    api.handleDomMutations();
+    assert(api.pendingScanDelay() <= 150, 'detached target should rescan quickly');
+  });
+  await test('another video starting to play triggers a quick rescan', async () => {
+    fixture = makeTarget();
+    api.installForTarget(fixture);
+    api.handleMediaPlay({ target: fixture.video });
+    equal(api.pendingScanDelay(), null);
+    const other = document.createElement('video');
+    document.body.append(other);
+    api.handleMediaPlay({ target: other });
+    assert(api.pendingScanDelay() <= 150, 'new playing video should rescan quickly');
+    other.remove();
   });
   document.getElementById('results').textContent = results.join('\n');
 })().catch((error) => {

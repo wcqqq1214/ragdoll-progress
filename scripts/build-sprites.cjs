@@ -63,9 +63,15 @@ async function main() {
       background: '#00000000' } }).composite([{ input: resized,
       left: 406 - width, top: 227 - height - lift }]).png().toBuffer());
   }
-  await sharp({ create: { width: 420 * 8, height: 235, channels: 4, background: '#00000000' } })
-    .composite(frames.map((input, i) => ({ input, left: i * 420, top: 0 })))
-    .png().toFile(asset('cat-sprite.png'));
+  // The extension shows each cell at 84 x 47 CSS px, so ship 2x cells (168 x 94).
+  // Downscale each frame on its own so resampling never bleeds across cells.
+  const cellWidth = 168, cellHeight = 94;
+  const spriteFrames = await Promise.all(frames.map(frame => sharp(frame)
+    .resize(cellWidth, cellHeight, { kernel: 'lanczos3' }).png().toBuffer()));
+  await sharp({ create: { width: cellWidth * 8, height: cellHeight, channels: 4,
+    background: '#00000000' } })
+    .composite(spriteFrames.map((input, i) => ({ input, left: i * cellWidth, top: 0 })))
+    .png({ compressionLevel: 9, adaptiveFiltering: true }).toFile(asset('cat-sprite.png'));
   // Center the complete running cycle for standalone previews. Apply one shared
   // offset so alignment between frames stays identical to the extension sprite.
   const running = poses.slice(0, 6);

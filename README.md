@@ -23,6 +23,9 @@ Respects reduced-motion preferences.
 
 After updating, reload the extension and refresh your video tabs.
 
+To build a slim copy with only the runtime files, run `node scripts/package.mjs`.
+It writes `dist/ragdoll-progress/` (load it unpacked) and a zip for the Chrome Web Store.
+
 ## License
 
 MIT

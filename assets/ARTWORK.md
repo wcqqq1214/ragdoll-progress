@@ -6,9 +6,11 @@ Generated with the built-in imagegen tool, using the owner's cat photos
 distributed with this repository.
 
 `fanqie-atlas.png` is the original transparent 4-column, 2-row generated atlas.
-`cat-sprite.png` packs its eight poses in one horizontal row of 420 × 235 cells:
+`cat-sprite.png` packs its eight poses in one horizontal row of 168 × 94 cells:
 six running frames, resting loaf, curled sleeping pose. The extension displays
-each cell at 84 × 47 CSS pixels. Running takes 840 ms per cycle.
+each cell at 84 × 47 CSS pixels, so the sprite is exactly 2x for high-DPI
+screens. Frames are composed on 420 × 235 cells, then downscaled one by one.
+Running takes 840 ms per cycle.
 
 `preview.png` and `ragdoll-progress.gif` are derived from the same frames.
 The GIF uses six 140 ms frames. Standalone previews use one shared horizontal
